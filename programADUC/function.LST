@@ -1,0 +1,316 @@
+C51 COMPILER V9.56.0.0   FUNCTION                                                          01/14/2018 16:49:51 PAGE 1   
+
+
+C51 COMPILER V9.56.0.0, COMPILATION OF MODULE FUNCTION
+OBJECT MODULE PLACED IN function.OBJ
+COMPILER INVOKED BY: D:\Programy\C51\BIN\C51.EXE function.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND TABS(2)
+
+line level    source
+
+   1          #include "function.h"
+   2          #define DOT_TIME 500
+   3          #define LINE_TIME 1000
+   4          #define SPACE_TIME 2000
+   5          
+   6          xdata unsigned int MORS_SIGNAL_TIME[50];
+   7          xdata unsigned char TRANSLATED_MORS[50];
+   8          xdata unsigned char *WSK_TRANSLATED_MORS = &TRANSLATED_MORS[0];
+   9          
+  10          xdata unsigned char mors[][5]={     // TODO czemnu robisz 5 jak morse ma 4 znaki 
+  11            
+  12            { ".-" },   //A 
+  13            { "-..." },   //B
+  14            { "-.-." },   //C
+  15            { "-.." },    //D
+  16            { "." },    //E
+  17            { "..-." },   //F
+  18            { "--." },    //G
+  19            { "...." },   //H
+  20            { ".." },   //I
+  21            { ".---" },   //J
+  22            { "-.-" },    //K
+  23            { ".-.." },   //L
+  24            { "--" },   //M
+  25            { "-." },   //N
+  26            { "---" },    //O
+  27            { ".--." },   //P
+  28            { "--.-" },   //Q
+  29            { ".-." },    //R
+  30            { "..." },    //S
+  31            { "-" },    //T
+  32            { "..-" },    //U
+  33            { "...-" },   //V
+  34            { ".--" },    //W
+  35            { "-..-" },   //X
+  36            { "-.--" },   //Y
+  37            { "--.." }    //Z
+  38            
+  39          };
+  40          void delay(unsigned long c)
+  41          {
+  42   1        int a = 0;
+  43   1        int i =0;
+  44   1        for(i; i<c;i++)
+  45   1        {
+  46   2        }
+  47   1      }
+  48          
+  49          
+  50          void delay_ms(int ms)
+  51          {
+  52   1        uint32_t cycles = ((float)ms - 0.022)/0.016 + 0.5;
+  53   1        delay(cycles);
+  54   1      }
+  55          void delay_us(int us)
+C51 COMPILER V9.56.0.0   FUNCTION                                                          01/14/2018 16:49:51 PAGE 2   
+
+  56          {
+  57   1        uint32_t cycles = ((float)us/1000.0  - 0.022)/0.016 + 0.5;
+  58   1        delay(cycles);
+  59   1      }
+  60          
+  61          
+  62          // LCD //////////////////////////////////////////
+  63          void LCD_Send(char dane, bit RS, bit RW)
+  64          {
+  65   1        LCDZgoda = 1;
+  66   1        LCDRS = RS;
+  67   1        LCDRW = RW;
+  68   1        LCDDANE = dane;
+  69   1        LCDZgoda = 0;
+  70   1        delay(50);
+  71   1        LCDZgoda = 1;
+  72   1        delay(500);
+  73   1      }
+  74          void LCD_znak(char znak)
+  75          {
+  76   1        LCD_Send(znak,1,0);
+  77   1      }
+  78          
+  79          void LCD_Send_str(char *str)
+  80          {
+  81   1        while(*str != '\0')
+  82   1        {
+  83   2          LCD_znak(*str);
+  84   2          str++;
+  85   2        }
+  86   1      }
+  87          
+  88          void LCD_GoTo(unsigned char x, unsigned char y)
+  89          {
+  90   1        LCD_Send(0x80 | (x + (0x40 * y)), 0 ,0);
+  91   1      }
+  92          void Function_set(int D, int N,int F)
+  93          {
+  94   1        LCD_Send(0x20+0x10*D+0x8*N+0x4*F,0,0);
+  95   1      }
+  96          
+  97          void Display_ON_OFF(int D, int C,int B)
+  98          {
+  99   1        LCD_Send(0x08+0x4*D+0x2*C+0x1*B, 0,0);
+ 100   1      }
+ 101          void Display_clear(void)
+ 102          {
+ 103   1        LCD_Send(0x01,0,0);
+ 104   1        delay_us(1540);
+ 105   1      }
+ 106          void Entry_mode(int I, int S )
+ 107          {
+ 108   1        LCD_Send(0x04+0x2*I+0x1*S,0,0);
+ 109   1      }
+ 110          void LCD_init(void)
+ 111          {
+ 112   1        I2CM = 1;
+ 113   1        MDE = 1;
+ 114   1        delay_ms(20);
+ 115   1        LCD_Send(0x30,0,0);
+ 116   1        delay_ms(5);
+ 117   1        LCD_Send(0x30,0,0);
+C51 COMPILER V9.56.0.0   FUNCTION                                                          01/14/2018 16:49:51 PAGE 3   
+
+ 118   1        delay_ms(1);
+ 119   1        LCD_Send(0x30,0,0);
+ 120   1        Function_set(1,1,0);
+ 121   1        Display_ON_OFF(0,0,0); 
+ 122   1        Display_clear(); 
+ 123   1        delay_ms(1);
+ 124   1        Entry_mode(1,0); 
+ 125   1        Display_ON_OFF(1,0,0);
+ 126   1      }
+ 127          
+ 128          void LCD_Display_Cursor_shift(int S, int R)
+ 129          {
+ 130   1        LCDZgoda = 1;
+ 131   1        LCDRS = 0;
+ 132   1        LCDRW = 0;
+ 133   1        LCDDANE=0x10+0x8*S+0x4*R;
+ 134   1        LCDZgoda = 0;
+ 135   1        delay_us(37);
+ 136   1      }
+ 137          // UART /////////////////////////////////////////
+ 138          void UART_init(void)
+ 139          {
+ 140   1        SM0=0; 
+ 141   1        SM1=1;
+ 142   1        REN=1; 
+ 143   1        T3CON=0x84;
+ 144   1        T3FD=0x08;
+ 145   1      }
+ 146          
+ 147          char UART_putchar (char c)
+ 148          {
+ 149   1        SBUF=c;
+ 150   1        while(!TI);
+ 151   1        TI=0;
+ 152   1        return c;
+ 153   1      }
+ 154          void UART_puts(char* str)
+ 155          {
+ 156   1        while (*str!='\0')
+ 157   1        {
+ 158   2          UART_putchar(*str);
+ 159   2          str++;
+ 160   2        }
+ 161   1      }
+ 162          /*
+ 163          void UART_printf(const char * format,...)
+ 164          {
+ 165            xdata char buffer[20];
+ 166            va_list args;
+ 167            int i=0;
+ 168            va_start (args, format);
+ 169            vsprintf(buffer,format, args);
+ 170            va_end(args);
+ 171            
+ 172            UART_puts(buffer);
+ 173            
+ 174          }
+ 175          */
+ 176          void ARRAY_clear(char* str)
+ 177          {
+ 178   1        while (*str!='\0')
+ 179   1        {
+C51 COMPILER V9.56.0.0   FUNCTION                                                          01/14/2018 16:49:51 PAGE 4   
+
+ 180   2          *str=0;
+ 181   2          str++;
+ 182   2        }
+ 183   1      }
+ 184          //MORS//////////////////////////////
+ 185          
+ 186          void MORS_trans( unsigned char *tab)
+ 187          {
+ 188   1        xdata int poz = -1;   //przeniesione do xdata prze brak dostepenj pamieci 
+ 189   1        xdata int L = 0;      //przeniesione do xdata prze brak dostepenj pamieci 
+ 190   1        xdata int a=0;        //przeniesione do xdata prze brak dostepenj pamieci 
+ 191   1        while (*tab != '\0')
+ 192   1        {
+ 193   2          
+ 194   2          if (*tab > 91)   // Rozroznienie duzych i malych liter kodu ASCI
+ 195   2          {
+ 196   3             a = *tab - 97;
+ 197   3          }
+ 198   2          else
+ 199   2          {
+ 200   3            a = *tab - 65;
+ 201   3          }
+ 202   2          L=0;
+ 203   2          while (mors[a][L] != '\0') 
+ 204   2          {
+ 205   3            poz++;
+ 206   3            TRANSLATED_MORS[poz] = mors[a][L];    // zapisanie znaku do tablicy wynikowej
+ 207   3            L++;
+ 208   3          }
+ 209   2          poz++;
+ 210   2          TRANSLATED_MORS[poz] = 32 ; // rozdzielenie (spacja) kodow poszczegolnych znakow
+ 211   2          tab++;
+ 212   2        }
+ 213   1      }
+ 214          
+ 215          /*void MORS_signal(){
+ 216          
+ 217            
+ 218            while(*WSK_TRANSLATED_MORS != '\0')
+ 219            {
+ 220            
+ 221              if(*WSK_TRANSLATED_MORS=='-')
+ 222              {
+ 223              LedOn(LED_D5);
+ 224              T1_ustaw_czas_ms(MORS_LINE);
+ 225                TR1 =1; // run timer 1 
+ 226                
+ 227              }
+ 228              if(*WSK_TRANSLATED_MORS=='.')
+ 229              {
+ 230              LedOn(LED_D5);
+ 231              T1_ustaw_czas_ms(MORS_DOT);
+ 232              TR1 =1; // run timer 1 
+ 233              }
+ 234             else
+ 235             {
+ 236              //przesuniecie kursora na LCD 
+ 237             
+ 238             }
+ 239            
+ 240            WSK_TRANSLATED_MORS++;
+ 241            }
+C51 COMPILER V9.56.0.0   FUNCTION                                                          01/14/2018 16:49:51 PAGE 5   
+
+ 242          }
+ 243          */
+ 244          
+ 245          /*void MORS_SINGAL_TIME_ARRAY_FILL( )
+ 246          {
+ 247            unsigned char *WSK_POM_TRANSLATED_MORS = &TRANSLATED_MORS[0];
+ 248            unsigned int poz_pom = 0 ; 
+ 249            ARRAY_clear(MORS_SIGNAL_TIME);
+ 250            while(*WSK_POM_TRANSLATED_MORS != '\0')
+ 251            {
+ 252            
+ 253              if(*WSK_POM_TRANSLATED_MORS=='-')
+ 254              {
+ 255              MORS_SINGAL_TIME[poz_pom]=LINE_TIME;
+ 256              poz_pom++;
+ 257                
+ 258              }
+ 259              else if(*WSK_POM_TRANSLATED_MORS=='.')
+ 260              {
+ 261                MORS_SINGAL_TIME[poz_pom]=DOT_TIME;
+ 262                poz_pom++;
+ 263              }
+ 264             else
+ 265             {
+ 266               MORS_SINGAL_TIME[poz_pom]=SPACE_TIME;
+ 267                poz_pom++;
+ 268             
+ 269             }
+ 270            
+ 271            WSK_POM_TRANSLATED_MORS++;
+ 272            }
+ 273          }
+ 274          
+ 275          int CYCLE( unsigned int *MORS_SIGNAL_TIME_POM;)//przyjume wskaznik na elelment tablicy MORS_SIGNAL_TIME
+ 276          {
+ 277          return *MORS_ SIGNAL_TIME_POM / 50 ;
+ 278          }
+ 279          */
+ 280          
+ 281          
+ 282          
+ 283          
+ 284          
+ 285          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    697    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =    283       6
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----       9
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----       2
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

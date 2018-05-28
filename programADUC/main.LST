@@ -1,0 +1,240 @@
+C51 COMPILER V9.56.0.0   MAIN                                                              01/14/2018 16:49:51 PAGE 1   
+
+
+C51 COMPILER V9.56.0.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN main.OBJ
+COMPILER INVOKED BY: D:\Programy\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND TABS(2)
+
+line level    source
+
+   1          #include "main.h"
+   2          
+   3          xdata unsigned char UART_DATA[10];
+   4          xdata unsigned int save,licznik_UART=0;
+   5          xdata unsigned int flaga_stop=0, flaga_start=0,flaga_LCD=0,flaga_triak= 0;
+   6          xdata unsigned int TH1_ustaw,TL1_ustaw, triak_on=0,czas=0,TH0_ustaw=0,TL0_ustaw=0 ; 
+   7          xdata unsigned int licznik_timer=0, licznik_LCD=0,licznik_pom_LCD=0;
+   8          
+   9          
+  10          
+  11          /////////////////////////Zakomentowane do testu czy dziala na diodzie//////////////////////////////
+  12          /*
+  13          void triak() interrupt 0 //przerwanie zewnatrzne 
+  14          {
+  15            if(flaga_triak)
+  16            {
+  17            TH0=TH0_ustaw;
+  18            TL0=TL0_ustaw;
+  19            
+  20            }
+  21            TR0 = 1;
+  22          }
+  23          void Init_T0() interrupt 1 //przerwanie timer1
+  24          {
+  25            Triak_On();
+  26            TR0 = 0;
+  27            delay(5);
+  28            Triak_Off();
+  29            
+  30            
+  31          }
+  32          */
+  33          ///////////////////////////////////////////////////////////
+  34          void Timer1_interrupt() interrupt 3
+  35          {
+  36   1            if(*WSK_TRANSLATED_MORS==36)    
+  37   1            {
+  38   2              flaga_LCD=1;
+  39   2            }
+  40   1            if(*WSK_TRANSLATED_MORS!='\0') 
+  41   1            {
+  42   2              if(*WSK_TRANSLATED_MORS=='-')
+  43   2              {
+  44   3                LedOn(LED_D5);  
+  45   3                flaga_triak = 1 ; 
+  46   3                if(licznik_timer<10)
+  47   3                {
+  48   4                  licznik_timer++;
+  49   4                }
+  50   3                else{
+  51   4                  triak_on=1;
+  52   4                  licznik_timer=0;
+  53   4                  *WSK_TRANSLATED_MORS++;
+*** WARNING C275 IN LINE 53 OF main.c: expression with possibly no effect
+  54   4                }
+C51 COMPILER V9.56.0.0   MAIN                                                              01/14/2018 16:49:51 PAGE 2   
+
+  55   3              }
+  56   2              else if(*WSK_TRANSLATED_MORS=='.') 
+  57   2              {
+  58   3                LedOn(LED_D5);  
+  59   3                flaga_triak = 1;
+  60   3                if(licznik_timer<5)
+  61   3                {
+  62   4                  licznik_timer++;
+  63   4                }
+  64   3                else{
+  65   4                  triak_on=1;
+  66   4                  licznik_timer=0;
+  67   4                  *WSK_TRANSLATED_MORS++;
+*** WARNING C275 IN LINE 67 OF main.c: expression with possibly no effect
+  68   4                }
+  69   3              }
+  70   2              else if(*WSK_TRANSLATED_MORS==36||triak_on)  
+  71   2              {
+  72   3                LedOff(LED_D5);
+  73   3                flaga_triak= 0;
+  74   3                if(licznik_timer<2)
+  75   3                {
+  76   4                  licznik_timer++;
+  77   4                }
+  78   3                else{
+  79   4                  triak_on=0;
+  80   4                  licznik_timer=0;
+  81   4                  *WSK_TRANSLATED_MORS++;
+*** WARNING C275 IN LINE 81 OF main.c: expression with possibly no effect
+  82   4                }
+  83   3              }
+  84   2              
+  85   2            } 
+  86   1            else
+  87   1            {
+  88   2              *WSK_TRANSLATED_MORS = &TRANSLATED_MORS[0];
+*** WARNING C260 IN LINE 88 OF main.c: '=': pointer truncation
+  89   2            }
+  90   1            TH1=TH1_ustaw;
+  91   1            TL1=TL1_ustaw;
+  92   1      }
+  93          
+  94          void UART_interrupt() interrupt 4
+  95          {
+  96   1        if(RI)
+  97   1        {
+  98   2          if(SBUF=='%')
+  99   2          {
+ 100   3            save=0;
+ 101   3            flaga_stop = 1 ; 
+ 102   3          }
+ 103   2          if(save)
+ 104   2          {
+ 105   3            
+ 106   3            UART_DATA[licznik_UART]=SBUF;
+ 107   3            licznik_UART++;
+ 108   3          }
+ 109   2          if(SBUF=='$')
+ 110   2          {
+ 111   3            licznik_UART=0;
+ 112   3            ARRAY_clear(&UART_DATA);  
+ 113   3            save=1; 
+C51 COMPILER V9.56.0.0   MAIN                                                              01/14/2018 16:49:51 PAGE 3   
+
+ 114   3            flaga_start=1;
+ 115   3            TR1=0;
+ 116   3          }   
+ 117   2          RI=0;   
+ 118   2        }
+ 119   1      }
+ 120          int main(void)
+ 121          {
+ 122   1        //Zgoda na Timer2 ma wiekkszy priorytet niz UART   !!!!
+ 123   1        // Zgoada na Timer1 ma mniejszy priorytet niz UART !!!! 
+ 124   1        //Zgody na obsluge przerwan
+ 125   1        EA=1;  //Zgoda na przerwanie 
+ 126   1        ES=1;  //Zgoda na przerwanie od UART
+ 127   1        ET1=1; //Zgoda na przerwanie od Timer1 ;
+ 128   1        EX0 = 1; //Zgoda na przerwanie zewnetrzne
+ 129   1        IT0 = 0; //Definiwanie wyzolenia 
+ 130   1        ET0 = 1; // Zgoda na przerwanie od TIMER0
+ 131   1        //inicjalizacja ekrany
+ 132   1        UART_init();
+ 133   1        LCD_init();
+ 134   1        
+ 135   1       
+ 136   1          //inicjalizacja Timer0
+ 137   1        czas=liczczas(5);
+ 138   1        TL0_ustaw=T0_rejestr_wartosc_poczatkowa(czas);
+ 139   1        TH0_ustaw=T0_rejestr_wartosc_poczatkowa(czas)>>8;
+ 140   1        TR0 = 0 ; 
+ 141   1        
+ 142   1        //inicjalizacja Timer1
+ 143   1        TMOD = 0x11;  // timera1 - 16bit Timer  TIMER0 - 16bit Timer
+ 144   1        TL1_ustaw=T1_rejestr_wartosc_poczatkowa(50);
+ 145   1        TH1_ustaw=T1_rejestr_wartosc_poczatkowa(50)>>8;
+ 146   1        TR1=0;
+ 147   1        
+ 148   1        //ARRAY_clear(&UART_DATA);    
+ 149   1        SetBit(CFG831,0); //XRAM 
+ 150   1        
+ 151   1        while(1)
+ 152   1        {
+ 153   2          
+ 154   2          if(flaga_stop)
+ 155   2          {
+ 156   3            ARRAY_clear(&TRANSLATED_MORS);
+ 157   3            MORS_trans(UART_DATA); //Tlumaczenie 
+ 158   3            
+ 159   3            // Wysylanie morsa do javy  start     
+ 160   3            UART_putchar('$');
+ 161   3            UART_puts(TRANSLATED_MORS);
+ 162   3            UART_putchar('%');
+ 163   3            // Wysylanie morsa do javy  stop
+ 164   3            Display_clear(); //moze nie dzialac 
+ 165   3            
+ 166   3            LCD_GoTo(0,0); //moze nie dzialac 
+ 167   3            LCD_Send_str(UART_DATA); 
+ 168   3            LCD_Display_Cursor_shift(0,0); // moze nie dzialac
+ 169   3          
+ 170   3            *WSK_TRANSLATED_MORS = &TRANSLATED_MORS[0];
+*** WARNING C260 IN LINE 170 OF main.c: '=': pointer truncation
+ 171   3            licznik_timer=0;
+ 172   3            triak_on=0;
+ 173   3            TH1=TH1_ustaw;
+ 174   3            TL1=TL1_ustaw;
+C51 COMPILER V9.56.0.0   MAIN                                                              01/14/2018 16:49:51 PAGE 4   
+
+ 175   3            TR1=1;
+ 176   3          flaga_stop=0;
+ 177   3          }
+ 178   2          if(flaga_LCD)
+ 179   2          {
+ 180   3            if(licznik_pom_LCD)
+ 181   3            {
+ 182   4              if(licznik_LCD>=licznik_UART)
+ 183   4              {
+ 184   5              licznik_LCD=0;
+ 185   5              }
+ 186   4              LCD_Display_Cursor_shift(licznik_LCD,0);
+ 187   4              licznik_LCD++;
+ 188   4              licznik_pom_LCD=0;
+ 189   4            }
+ 190   3            else{
+ 191   4              licznik_pom_LCD++;
+ 192   4            }
+ 193   3            flaga_LCD=0;
+ 194   3            
+ 195   3          }
+ 196   2          
+ 197   2            
+ 198   2          
+ 199   2        }
+ 200   1        return 0;
+ 201   1      }
+ 202          
+ 203          
+ 204            //MODE COM3 19200,0,8,1
+ 205            //ASSIGN COM3 <SIN> SOUT
+*** WARNING C294 IN LINE 200 OF main.c: unreachable code
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    817    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =     40    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  6 WARNING(S),  0 ERROR(S)

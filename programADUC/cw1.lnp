@@ -1,0 +1,4 @@
+"main.obj",
+"function.obj" 
+TO "cw1" 
+RAMSIZE(256) 
