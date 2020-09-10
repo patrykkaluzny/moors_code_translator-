@@ -6,5 +6,5 @@ This repository contest source code for microcontroller written in C language an
 
 This project was created by:
 * https://github.com/patrykkaluzny
-*
+* https://github.com/Bielan
 
